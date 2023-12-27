@@ -19,7 +19,8 @@ class Color:
         for k in range(0, len(all_colors)):
             if all_colors[k] != self:
                 self.distance.append(
-                    [all_colors[k], np.linalg.norm(self.lab - all_colors[k].lab) * all_colors[k].percentage])
+                    [all_colors[k], np.linalg.norm(self.lab - all_colors[k].lab) * all_colors[k].percentage,
+                     np.linalg.norm(self.lab - all_colors[k].lab)])
         for i in self.distance:
             self.total_distance += i[1]
 
@@ -48,3 +49,9 @@ class Color:
         self.lab = np.array([L(color_xyz[1]),
                              500 * (f(color_xyz[0]) - f(color_xyz[1])),
                              200 * (f(color_xyz[1]) - f(color_xyz[2]))])
+
+    def get_distance_to_color(self, color):
+        for distance_array in self.distance:
+            if np.array_equal(distance_array[0].rgb, color.rgb):
+                return distance_array[2]
+        return 0
