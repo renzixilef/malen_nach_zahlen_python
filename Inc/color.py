@@ -4,11 +4,44 @@ import numpy as np
 class Color:
 
     @classmethod
-    def create_color_from_lab_and_percentage (cls, lab, percentage):
-        color_rgb = np.array ([])
+    def create_color_from_lab_and_percentage(cls, lab, percentage):
+        INVERSE_CONVERSION_MATRIX = np.linalg.inv(np.array(
+            [[0.412453, 0.357580, 0.180423],
+             [0.212671, 0.715160, 0.072169],
+             [0.019334, 0.119193, 0.950227]]))
+        XN = 0.950456
+        ZN = 1.088754
 
+        def y(L):
+            y_k = ((L + 16) / 116) ** 3
+            if y_k > 0.008856:
+                return y_k
+            else:
+                return L / 903.3
 
-    def __init__(self, color_rgb, percentage, own_color_key, count_pixel, bgr=False):
+        def t(y, a=None, b=None):
+            f_of_y = y ** (1 / 3) if y > 0.00856 else 7.787 * y + 16 / 116
+            ret_value = 0
+            if a is not None:
+                ret_value = a / 500 + f_of_y
+            elif b is not None:
+                ret_value = - b / 200 + f_of_y
+            ret_value_t = ret_value ** 3
+            if ret_value_t > 0.008856:
+                return ret_value
+            else:
+                return (ret_value - 16 / 116) / 7.787
+
+        Y = y(lab[0])
+        X_n = t(Y, a=lab[1])
+        Z_n = t(Y, b=lab[2])
+        Z = Z_n * ZN
+        X = X_n * XN
+
+        color_rgb = np.dot(INVERSE_CONVERSION_MATRIX, np.array([X, Y, Z]))*255
+        return cls(color_rgb, percentage, str(color_rgb), bgr = True)
+
+    def __init__(self, color_rgb, percentage, own_color_key, count_pixel=0, bgr=False):
         if bgr:
             self.rgb = np.array([color_rgb[2], color_rgb[1], color_rgb[0]])
             self.bgr = np.array([color_rgb[0], color_rgb[1], color_rgb[2]])
@@ -68,4 +101,3 @@ class Color:
 
     def get_lab_distance_multiplied_with_percentage(self, lab):
         return np.linalg.norm(self.lab - lab) * self.percentage
-

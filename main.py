@@ -16,7 +16,7 @@ def get_all_unique_colors_sorted(image):
     sorted_colors = {}
     for k in range(0, len(colors)):
         sorted_colors[str(colors[k])] = Color(colors[k], count[k] / total_pixels, str(colors[k]), count[k], bgr=True)
-    return sorted_colors
+    return total_pixels, sorted_colors
 
 
 def append_common_colors_rest(array_to_append, color_dict, count_colors_to_keep):
@@ -59,8 +59,9 @@ pil_img = Image.open(PATH_TO_IMAGE + IMAGE_EXTENSION)
 pil_img = pil_img.convert("P", palette=Image.ADAPTIVE, colors=256)
 pil_img.save(PATH_TO_IMAGE + ".png")
 img_bgr = cv2.imread(PATH_TO_IMAGE + ".png")
+print(img_bgr[0][0])
 print(str(datetime.now() - start_time) + ": Getting and sorting all Colors...")
-all_colors = get_all_unique_colors_sorted(img_bgr)
+count_pixels, all_colors = get_all_unique_colors_sorted(img_bgr)
 print("TOTAL COLORS: " + str(len(all_colors)))
 print(str(datetime.now() - start_time) + ": Converting Colors to Lab color range...")
 for color in all_colors.values():
@@ -93,22 +94,25 @@ for key in all_colors.keys():
             smallest_distance_common_color_key = common_color_key
     common_colors_with_rel_colors[smallest_distance_common_color_key].append(key)
 print(str(datetime.now() - start_time) + ": Calculating replacement colors for common Color groups...")
+#TODO: fix this mess
 for common_color_key in common_colors_with_rel_colors:
-    labs = []
+    rgbs = []
     pixels = []
     for color_key in common_colors_with_rel_colors[common_color_key]:
-        labs.append(all_colors[color_key].lab)
+        rgbs.append(all_colors[color_key].lab)
         pixels.append(all_colors[color_key].count_pixel)
     pixels_divided = np.divide(pixels, np.sum(pixels))
     pixels_divided_reshaped = np.reshape(pixels_divided, (len(pixels_divided), 1))
-    weighted_labs = np.multiply(labs, pixels_divided_reshaped)
-    replacement_color_lab = np.mean(weighted_labs)
-    #TODO: createColorfromLab
-    #TODO: add createdColor as replacement_key to every color in common_color_group
-    #TODO: change code in replacement function to use Color Object instead of key
+    weighted_labs = np.multiply(rgbs, pixels_divided_reshaped)
+    replacement_color_rgb = np.sum(weighted_labs, axis=0)
+    replacement_color = Color(replacement_color_rgb, np.sum(pixels)/count_pixels, str(replacement_color_rgb))
+    replacement_color_key = replacement_color.this_color_key
+    all_colors[replacement_color_key] = replacement_color
+    for color in common_colors_with_rel_colors[common_color_key]:
+        all_colors[color].replacement_key = replacement_color_key
 print(str(datetime.now() - start_time) + ": Replacing Colors with common colors...")
 img_bgr = replace_colors_with_common_colors(img_bgr, all_colors)
-print("TOTAL COLORS NOW: " + str(len(get_all_unique_colors_sorted(img_bgr))))
+print("TOTAL COLORS NOW: " + str(len(get_all_unique_colors_sorted(img_bgr)[1])))
 print(str(datetime.now() - start_time) + ": Saving image...")
 cv2.imwrite('output2.png', img_bgr)
 # print(common_colors_with_rel_colors[0])
