@@ -3,10 +3,12 @@ import numpy as np
 from datetime import datetime
 from Inc.color import Color
 from PIL import Image
+from mpl_toolkits import mplot3d
+import matplotlib.pyplot as plt
 
 KEEP_COLORS = 24
 COUNT_THREADS = 1
-PATH_TO_IMAGE = "img/test2"
+PATH_TO_IMAGE = "img/test"
 IMAGE_EXTENSION = ".jpg"
 
 
@@ -59,7 +61,6 @@ pil_img = Image.open(PATH_TO_IMAGE + IMAGE_EXTENSION)
 pil_img = pil_img.convert("P", palette=Image.ADAPTIVE, colors=256)
 pil_img.save(PATH_TO_IMAGE + ".png")
 img_bgr = cv2.imread(PATH_TO_IMAGE + ".png")
-print(img_bgr[0][0])
 print(str(datetime.now() - start_time) + ": Getting and sorting all Colors...")
 count_pixels, all_colors = get_all_unique_colors_sorted(img_bgr)
 print("TOTAL COLORS: " + str(len(all_colors)))
@@ -99,13 +100,14 @@ for common_color_key in common_colors_with_rel_colors:
     rgbs = []
     pixels = []
     for color_key in common_colors_with_rel_colors[common_color_key]:
-        rgbs.append(all_colors[color_key].lab)
+        rgbs.append(all_colors[color_key].rgb)
         pixels.append(all_colors[color_key].count_pixel)
     pixels_divided = np.divide(pixels, np.sum(pixels))
     pixels_divided_reshaped = np.reshape(pixels_divided, (len(pixels_divided), 1))
     weighted_labs = np.multiply(rgbs, pixels_divided_reshaped)
     replacement_color_rgb = np.sum(weighted_labs, axis=0)
     replacement_color = Color(replacement_color_rgb, np.sum(pixels)/count_pixels, str(replacement_color_rgb))
+    replacement_color.calculate_lab()
     replacement_color_key = replacement_color.this_color_key
     all_colors[replacement_color_key] = replacement_color
     for color in common_colors_with_rel_colors[common_color_key]:
@@ -114,8 +116,40 @@ print(str(datetime.now() - start_time) + ": Replacing Colors with common colors.
 img_bgr = replace_colors_with_common_colors(img_bgr, all_colors)
 print("TOTAL COLORS NOW: " + str(len(get_all_unique_colors_sorted(img_bgr)[1])))
 print(str(datetime.now() - start_time) + ": Saving image...")
-cv2.imwrite('output2.png', img_bgr)
+cv2.imwrite('output.png', img_bgr)
 # print(common_colors_with_rel_colors[0])
 # print(common_colors_with_rel_colors[1])
 # print(common_colors_with_rel_colors[2])
 # print(common_colors_with_rel_colors[3])
+
+
+#plot rgb
+x = []
+y = []
+z = []
+x_rep = []
+y_rep = []
+z_rep = []
+x_com = []
+y_com = []
+z_com = []
+for color in all_colors.values():
+    if color.this_color_key in common_colors_keys:
+        x_com.append(color.lab[0])
+        y_com.append(color.lab[1])
+        z_com.append(color.lab[2])
+    elif not color.distance:
+        x_rep.append(color.lab[0])
+        y_rep.append(color.lab[1])
+        z_rep.append(color.lab[2])
+    else:
+        x.append(color.lab[0])
+        y.append(color.lab[1])
+        z.append(color.lab[2])
+
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+ax.scatter3D(x, y, z, color="grey")
+ax.scatter3D(x_com, y_com, z_com, color="green")
+ax.scatter3D(x_rep, y_rep, z_rep, color="red")
+plt.show(block=True)

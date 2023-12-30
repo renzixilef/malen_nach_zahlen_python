@@ -38,8 +38,10 @@ class Color:
         Z = Z_n * ZN
         X = X_n * XN
 
-        color_rgb = np.dot(INVERSE_CONVERSION_MATRIX, np.array([X, Y, Z]))*255
-        return cls(color_rgb, percentage, str(color_rgb), bgr = True)
+        color_rgb = np.dot(INVERSE_CONVERSION_MATRIX, np.array([X, Y, Z])) * 255
+        this_color = cls(color_rgb, percentage, str(color_rgb), bgr=False)
+        this_color.lab = lab
+        return this_color
 
     def __init__(self, color_rgb, percentage, own_color_key, count_pixel=0, bgr=False):
         if bgr:
